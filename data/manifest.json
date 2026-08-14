@@ -1,0 +1,13 @@
+{
+  "asset_count": 198,
+  "image_count": 80,
+  "generated_from": "Remedial_Health_IT_Gadgets_Disposal_Auction_COMPLETE.html",
+  "structure": [
+    "index.html",
+    "data/assets.json",
+    "assets/logo",
+    "assets/images/",
+    "README.md",
+    ".gitignore"
+  ]
+}
