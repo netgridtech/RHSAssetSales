@@ -27,3 +27,7 @@ The Bid / Purchase Cart supports a maximum of three assets and sends the selecte
 ## Source
 
 The asset register was structured from the supplied IT Asset Disposal document used for this catalogue.
+
+
+### CSV export
+Purchase requests are exported as UTF-8 CSV with real CRLF row endings and a UTF-8 BOM for Excel/Google Sheets compatibility. Each selected asset occupies one row and the Asset Tag is the primary asset identifier.
