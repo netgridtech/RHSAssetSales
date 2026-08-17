@@ -851,7 +851,74 @@ body{
  .countdown-unit{flex:1;min-width:0}
 }
 
+
+/* Header scroll UX: full header scrolls away; only the auction countdown remains visible */
+.site-header,
+header.site-header,
+.hero-header,
+.page-header {
+  position: relative !important;
+  top: auto !important;
+  z-index: 10 !important;
+}
+
+.auction-countdown,
+.countdown-card,
+#auctionCountdown,
+.fair-opening-card {
+  position: sticky;
+  top: 0;
+  z-index: 1000;
+}
+
+/* Give the countdown a clean floating/sticky treatment while scrolling */
+.auction-countdown,
+.countdown-card,
+#auctionCountdown,
+.fair-opening-card {
+  box-shadow: 0 4px 14px rgba(2, 6, 23, .16);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+}
+
+/* If the countdown is nested inside the header, keep it visible independently */
+header .auction-countdown,
+header .countdown-card,
+header #auctionCountdown,
+header .fair-opening-card {
+  position: sticky;
+  top: 0;
+}
+
+/* Prevent the sticky countdown from taking excessive mobile space */
+@media (max-width: 700px) {
+  .auction-countdown,
+  .countdown-card,
+  #auctionCountdown,
+  .fair-opening-card {
+    min-height: 0;
+  }
+}
+
 </style>
+
+<style id="header-scroll-override">
+/* Final override for the requested scrolling behavior */
+header.site-header,
+.site-header,
+.hero-header,
+.page-header {
+  position: relative !important;
+  top: auto !important;
+}
+body.page-scrolled header.site-header,
+body.page-scrolled .site-header,
+body.page-scrolled .hero-header,
+body.page-scrolled .page-header {
+  position: relative !important;
+}
+</style>
+
 </head>
 <body>
 <header class="header">
@@ -1214,6 +1281,27 @@ loadAssets();
   updateCountdown();
   setInterval(updateCountdown,1000);
 })();
+</script>
+<script>
+
+/* Scroll behavior: keep the auction countdown visible while the rest of the header scrolls away. */
+(function () {
+  const countdown = document.querySelector(
+    '.auction-countdown, .countdown-card, #auctionCountdown, .fair-opening-card'
+  );
+  if (!countdown) return;
+
+  const header = countdown.closest('header');
+  if (header) header.classList.add('header-scroll-enabled');
+
+  function updateScrollState() {
+    document.body.classList.toggle('page-scrolled', window.scrollY > 8);
+  }
+
+  window.addEventListener('scroll', updateScrollState, { passive: true });
+  updateScrollState();
+})();
+
 </script>
 </body>
 </html>
