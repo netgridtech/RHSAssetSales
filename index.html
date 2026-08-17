@@ -815,6 +815,42 @@ body{
   .cart-body{max-height:520px}
 }
 
+
+.csv-help{grid-column:1/-1;font-size:.57rem;color:#94a3b8;margin-top:-2px;text-align:right}
+.request-confirmation{position:fixed;right:18px;bottom:120px;z-index:1300;max-width:430px;display:flex;align-items:center;gap:11px;padding:12px 14px;border:1px solid #bbf7d0;border-radius:12px;background:#f0fdf4;color:#14532d;box-shadow:0 12px 32px rgba(15,23,42,.18)}
+.request-confirmation-icon{width:30px;height:30px;flex:0 0 30px;border-radius:50%;display:grid;place-items:center;background:#16a34a;color:#fff;font-weight:950}
+.request-confirmation-copy{display:flex;flex-direction:column;gap:2px;min-width:0}.request-confirmation-copy strong{font-size:.75rem}.request-confirmation-copy span{font-size:.64rem}.request-confirmation-copy small{font-size:.58rem;line-height:1.35;color:#166534}.request-confirmation>button{margin-left:auto;border:0;background:transparent;color:#166534;font-size:1rem;cursor:pointer}
+@media(max-width:700px){.csv-help{grid-column:1/-1;text-align:left}.request-confirmation{left:12px;right:12px;bottom:105px;max-width:none}}
+
+
+/* Auction opening countdown */
+.opening-date-fact{display:flex;align-items:center;justify-content:space-between;gap:14px}
+.opening-date-main{min-width:0}
+.auction-countdown{flex:0 0 auto;min-width:205px;padding-left:14px;border-left:1px solid rgba(255,255,255,.13)}
+.countdown-label{display:block;margin-bottom:5px;color:#94a3b8;font-size:.46rem;line-height:1;letter-spacing:.14em;font-weight:900}
+.countdown-units{display:flex;align-items:center;gap:4px}
+.countdown-unit{min-width:39px;padding:4px 4px 3px;text-align:center;border:1px solid rgba(255,255,255,.12);border-radius:6px;background:rgba(15,23,42,.28)}
+.countdown-unit strong{display:block;color:#fff;font-size:.78rem;line-height:1.05;font-variant-numeric:tabular-nums}
+.countdown-unit span{display:block;margin-top:2px;color:#94a3b8;font-size:.37rem;text-transform:uppercase;letter-spacing:.05em;font-weight:800}
+.auction-countdown.is-open .countdown-label{color:#86efac}
+.auction-countdown.is-open .countdown-units{display:none}
+.auction-countdown.is-open::after{content:'AUCTION IS NOW OPEN';display:block;color:#86efac;font-size:.66rem;font-weight:950;letter-spacing:.05em}
+@media(max-width:700px){
+ .opening-date-fact{align-items:stretch;gap:8px}
+ .auction-countdown{min-width:0;flex:1;padding-left:9px}
+ .countdown-units{gap:2px}
+ .countdown-unit{min-width:32px;padding:3px 2px}
+ .countdown-unit strong{font-size:.66rem}
+ .countdown-unit span{font-size:.33rem}
+ .countdown-label{font-size:.38rem;margin-bottom:4px}
+}
+@media(max-width:420px){
+ .opening-date-fact{display:block}
+ .auction-countdown{margin-top:8px;padding:7px 0 0;border-left:0;border-top:1px solid rgba(255,255,255,.13)}
+ .countdown-units{width:100%;justify-content:space-between}
+ .countdown-unit{flex:1;min-width:0}
+}
+
 </style>
 </head>
 <body>
@@ -831,9 +867,20 @@ body{
 
     <div class="header-info">
       <div class="auction-facts">
-        <div class="fact">
-          <span class="fact-label">Fair Opening Date</span>
-          <strong>31st August 2026</strong>
+        <div class="fact opening-date-fact">
+          <div class="opening-date-main">
+            <span class="fact-label">Fair Opening Date</span>
+            <strong>31st August 2026</strong>
+          </div>
+          <div class="auction-countdown" aria-live="polite" aria-label="Countdown to auction opening">
+            <span class="countdown-label">AUCTION OPENS IN</span>
+            <div class="countdown-units">
+              <div class="countdown-unit"><strong id="countDays">00</strong><span>Days</span></div>
+              <div class="countdown-unit"><strong id="countHours">00</strong><span>Hours</span></div>
+              <div class="countdown-unit"><strong id="countMinutes">00</strong><span>Min</span></div>
+              <div class="countdown-unit"><strong id="countSeconds">00</strong><span>Sec</span></div>
+            </div>
+          </div>
         </div>
         <div class="fact">
           <span class="fact-label">Sale Basis</span>
@@ -1032,57 +1079,47 @@ function updateStats(){
   document.getElementById("phones").textContent = devices.filter(d=>d.type==="Phone").length;
   document.getElementById("tablets").textContent = devices.filter(d=>d.type==="Tablet").length;
 }
+function makeRequestId(){
+  const now = new Date();
+  const stamp = now.getFullYear().toString()+String(now.getMonth()+1).padStart(2,'0')+String(now.getDate()).padStart(2,'0')+'-'+String(now.getHours()).padStart(2,'0')+String(now.getMinutes()).padStart(2,'0')+String(now.getSeconds()).padStart(2,'0');
+  const rand = Math.random().toString(36).slice(2,6).toUpperCase();
+  return `RHS-BID-${stamp}-${rand}`;
+}
+function csvCell(value){ const v=String(value??''); return `"${v.replace(/"/g,'""')}"`; }
+function downloadCSV(filename,rows){
+  const headers=['Request ID','Submission Date & Time','Buyer Name','Email','Phone','Expected Date of Payment','Mode of Payment','Asset Tag','Device Type','Manufacturer','Device Description','Model','Category','Condition / Fault','FMV'];
+  const csv=[headers,...rows].map(row=>row.map(csvCell).join(',')).join('\\r\\n');
+  const blob=new Blob([csv],{type:'text/csv;charset=utf-8;'});
+  const url=URL.createObjectURL(blob); const a=document.createElement('a'); a.href=url; a.download=filename; document.body.appendChild(a); a.click(); a.remove(); setTimeout(()=>URL.revokeObjectURL(url),1000);
+}
+function buildWhatsAppText(requestId,name,email,phone,paymentDate,paymentMode){
+  const lines=cart.map((d,i)=>`${i+1}. ${d.tag} | ${d.type} | ${d.brand} | ${d.model} | ${d.category} | ${d.price}`).join('\\n');
+  return `REMEDIAL HEALTH — IT ASSET (GADGETS) DISPOSAL CLEARANCE AUCTIONING\n\nPURCHASE REQUEST: ${requestId}\n\nSELECTED ASSETS\n${lines}\n\nBUYER INFORMATION\nName: ${name}\nEmail: ${email}\nPhone: ${phone}\nExpected Date of Payment: ${paymentDate}\nMode of Payment: ${paymentMode}\n\nCSV FILE: ${requestId}.csv\n\nThe CSV contains the complete structured purchase request and selected asset details. Please attach the downloaded CSV to this WhatsApp message before sending.\n\nPlease confirm availability and next steps for the selected gadget(s).`;
+}
 function submitWhatsApp(e){
   e.preventDefault();
-
-  if(!cart.length){
-    alert("Please add at least one asset to the cart.");
-    return;
-  }
-
-  const name = document.getElementById("buyerName").value.trim();
-  const email = document.getElementById("buyerEmail").value.trim();
-  const phone = document.getElementById("buyerPhone").value.trim();
-  const paymentDate = document.getElementById("paymentDate").value;
-  const paymentMode = document.getElementById("paymentMode").value;
-
-  // WhatsApp does not render HTML/Markdown tables as true tables.
-  // A monospace ASCII table is therefore used so the received message remains tabular and aligned.
-  const rows = cart.map(d => ({
-    tag:String(d.tag), type:String(d.type), manufacturer:String(d.brand),
-    device:String(d.name), model:String(d.model), category:String(d.category),
-    fault:String(d.condition), fmv:String(d.price)
-  }));
-
-  const clip=(v,n)=>v.length>n?v.slice(0,n-1)+'…':v;
-  const pad=(v,n)=>clip(v,n).padEnd(n,' ');
-  const table =
-`ASSET TAG | TYPE    | MANUFACTURER | MODEL       | CATEGORY | CONDITION / FAULT       | FMV
-----------|---------|--------------|-------------|----------|-------------------------|-------------
-${rows.map(d=>
-`${pad(d.tag,9)} | ${pad(d.type,7)} | ${pad(d.manufacturer,12)} | ${pad(d.model,11)} | ${pad(d.category,8)} | ${pad(d.fault,23)} | ${d.fmv}`
-).join("\n")}`;
-
-  const text =
-`REMEDIAL HEALTH — IT ASSET (GADGETS) DISPOSAL CLEARANCE AUCTIONING
-
-SELECTED ASSET TABLE
-\`\`\`
-${table}
-\`\`\`
-
-PRIMARY ASSET TAG(S): ${cart.map(d=>d.tag).join(', ')}
-
-BUYER INFORMATION
-Name: ${name}
-Email: ${email}
-Phone: ${phone}
-Expected Date of Payment: ${paymentDate}
-Mode of Payment: ${paymentMode}
-
-Please confirm availability and next steps for the selected gadget(s).`;
-
-  window.open(`https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(text)}`, "_blank");
+  if(!cart.length){ alert('Please add at least one asset to the cart.'); return; }
+  const name=document.getElementById('buyerName').value.trim();
+  const email=document.getElementById('buyerEmail').value.trim();
+  const phone=document.getElementById('buyerPhone').value.trim();
+  const paymentDate=document.getElementById('paymentDate').value;
+  const paymentMode=document.getElementById('paymentMode').value;
+  if(!name||!email||!phone||!paymentDate||!paymentMode){ alert('Please complete all buyer and payment details before submitting.'); return; }
+  const requestId=makeRequestId();
+  const submittedAt=new Date().toLocaleString('en-GB',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit',second:'2-digit',hour12:false});
+  const rows=cart.map(d=>[requestId,submittedAt,name,email,phone,paymentDate,paymentMode,d.tag,d.type,d.brand,d.name,d.model,d.category,d.condition,d.price]);
+  const filename=`${requestId}.csv`;
+  downloadCSV(filename,rows);
+  const text=buildWhatsAppText(requestId,name,email,phone,paymentDate,paymentMode);
+  try{ localStorage.setItem('rhsLastPurchaseRequest',JSON.stringify({requestId,submittedAt,filename,assets:cart.map(d=>d.tag),name,email,phone,paymentDate,paymentMode})); }catch(err){ console.warn('Local request log unavailable:',err); }
+  window.open(`https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(text)}`,'_blank');
+  showRequestConfirmation(requestId,filename);
+}
+function showRequestConfirmation(requestId,filename){
+  const old=document.getElementById('requestConfirmation'); if(old) old.remove();
+  const box=document.createElement('div'); box.id='requestConfirmation'; box.className='request-confirmation';
+  box.innerHTML=`<div class="request-confirmation-icon">✓</div><div class="request-confirmation-copy"><strong>Purchase request prepared</strong><span>Request ID: <b>${esc(requestId)}</b></span><small><b>${esc(filename)}</b> has been downloaded. Attach it to the WhatsApp message before sending.</small></div><button type="button" onclick="this.closest('.request-confirmation').remove()" aria-label="Close confirmation">×</button>`;
+  document.body.appendChild(box);
 }
 loadAssets();
 </script>
@@ -1120,7 +1157,7 @@ loadAssets();
             <option>Other</option>
           </select>
         </div>
-        <button class="whatsapp" type="submit">💬 Submit Bid / Purchase via WhatsApp</button>
+        <button class="whatsapp" type="submit">📄 Generate CSV & Open WhatsApp</button><div class="csv-help">CSV downloads automatically. Attach it to WhatsApp before sending.</div>
       </form>
       <p class="notice">Maximum <b>3 assets</b> per request. Each WhatsApp request uses the selected <b>Asset Tag(s)</b> as the primary reference.</p>
     </div>
@@ -1149,6 +1186,35 @@ loadAssets();
     const sync=()=>restoreCount.textContent=mainCount.textContent||"0";
     sync();new MutationObserver(sync).observe(mainCount,{childList:true,characterData:true,subtree:true});
   }
+})();
+</script>
+<script>
+(function(){
+  // Counts down to the start of 31 August 2026 in the visitor's local time.
+  const target = new Date(2026, 7, 31, 0, 0, 0, 0);
+  const box = document.querySelector('.auction-countdown');
+  const days = document.getElementById('countDays');
+  const hours = document.getElementById('countHours');
+  const minutes = document.getElementById('countMinutes');
+  const seconds = document.getElementById('countSeconds');
+  if(!box || !days || !hours || !minutes || !seconds) return;
+  const pad = n => String(n).padStart(2,'0');
+  function updateCountdown(){
+    const diff = target.getTime() - Date.now();
+    if(diff <= 0){
+      days.textContent='00'; hours.textContent='00'; minutes.textContent='00'; seconds.textContent='00';
+      box.classList.add('is-open');
+      box.setAttribute('aria-label','Auction is now open');
+      return;
+    }
+    const total = Math.floor(diff/1000);
+    days.textContent = pad(Math.floor(total/86400));
+    hours.textContent = pad(Math.floor((total%86400)/3600));
+    minutes.textContent = pad(Math.floor((total%3600)/60));
+    seconds.textContent = pad(total%60);
+  }
+  updateCountdown();
+  setInterval(updateCountdown,1000);
 })();
 </script>
 </body>
