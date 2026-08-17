@@ -851,74 +851,7 @@ body{
  .countdown-unit{flex:1;min-width:0}
 }
 
-
-/* Header scroll UX: full header scrolls away; only the auction countdown remains visible */
-.site-header,
-header.site-header,
-.hero-header,
-.page-header {
-  position: relative !important;
-  top: auto !important;
-  z-index: 10 !important;
-}
-
-.auction-countdown,
-.countdown-card,
-#auctionCountdown,
-.fair-opening-card {
-  position: sticky;
-  top: 0;
-  z-index: 1000;
-}
-
-/* Give the countdown a clean floating/sticky treatment while scrolling */
-.auction-countdown,
-.countdown-card,
-#auctionCountdown,
-.fair-opening-card {
-  box-shadow: 0 4px 14px rgba(2, 6, 23, .16);
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
-}
-
-/* If the countdown is nested inside the header, keep it visible independently */
-header .auction-countdown,
-header .countdown-card,
-header #auctionCountdown,
-header .fair-opening-card {
-  position: sticky;
-  top: 0;
-}
-
-/* Prevent the sticky countdown from taking excessive mobile space */
-@media (max-width: 700px) {
-  .auction-countdown,
-  .countdown-card,
-  #auctionCountdown,
-  .fair-opening-card {
-    min-height: 0;
-  }
-}
-
 </style>
-
-<style id="header-scroll-override">
-/* Final override for the requested scrolling behavior */
-header.site-header,
-.site-header,
-.hero-header,
-.page-header {
-  position: relative !important;
-  top: auto !important;
-}
-body.page-scrolled header.site-header,
-body.page-scrolled .site-header,
-body.page-scrolled .hero-header,
-body.page-scrolled .page-header {
-  position: relative !important;
-}
-</style>
-
 </head>
 <body>
 <header class="header">
@@ -1012,7 +945,7 @@ body.page-scrolled .page-header {
 </main>
 
 <script>
-const WHATSAPP_NUMBER = "2349167084846";
+const WHATSAPP_NUMBER = "2348025674643";
 let devices = [];
 let activeType = "ALL";
 let cart = [];
@@ -1154,7 +1087,7 @@ function makeRequestId(){
 }
 function csvCell(value){ const v=String(value??''); return `"${v.replace(/"/g,'""')}"`; }
 function downloadCSV(filename,rows){
-  const headers=['Request ID','Submission Date & Time','Buyer Name','Email','Phone','Expected Date of Payment','Asset Tag','Device Type','Manufacturer','Device Description','Model','Category','Condition / Fault','FMV'];
+  const headers=['Request ID','Bid Date','Submission Date & Time','Buyer Name','Email','Phone','Expected Date of Payment','Asset Tag','Device Type','Manufacturer','Device Description','Model','Category','Condition / Fault','Condition Detail','Price'];
   const csv=[headers,...rows].map(row=>row.map(csvCell).join(',')).join('\r\n');
   const bom=new Uint8Array([0xEF,0xBB,0xBF]);
   const blob=new Blob([bom,csv],{type:'text/csv;charset=utf-8;'});
@@ -1167,10 +1100,25 @@ function downloadCSV(filename,rows){
   a.remove();
   setTimeout(()=>URL.revokeObjectURL(url),1000);
 }
-function buildWhatsAppText(requestId,name,email,phone,paymentDate){
-  const primaryTags=cart.map((d,i)=>`${i+1}. ${d.tag}`).join('\n');
-  const conditions=cart.map((d,i)=>`${i+1}. Asset Tag ${d.tag} — ${d.condition || 'Not specified'}`).join('\n');
-  return `REMEDIAL HEALTH — IT ASSET (GADGETS) DISPOSAL CLEARANCE AUCTIONING\n\nPURCHASE REQUEST: ${requestId}\n\nPRIMARY ASSET TAG(S)\n${primaryTags}\n\nCONDITION / FAULT\n${conditions}\n\nBUYER INFORMATION\nName: ${name}\nEmail: ${email}\nPhone: ${phone}\nExpected Date of Payment: ${paymentDate}\n\nCSV FILE: ${requestId}.csv\n\nThe CSV contains the complete structured purchase request and selected asset details. Please attach the downloaded CSV to this WhatsApp message before sending.\n\nPlease confirm availability and next steps for the selected gadget(s).`;
+function moneyValue(value){
+  const n=parseFloat(String(value??'').replace(/[^0-9.-]/g,''));
+  return Number.isFinite(n)?n:0;
+}
+function formatAmount(value){
+  return `₦${value.toLocaleString('en-NG',{minimumFractionDigits:2,maximumFractionDigits:2})}`;
+}
+function conditionDetail(d){
+  return d.categoryDetail || d.category || '';
+}
+function buildWhatsAppText(requestId,name,email,phone,paymentDate,bidDate){
+  const lines=cart.map((d,i)=>{
+    const detail=conditionDetail(d);
+    return `${i+1}. ${d.tag} - ${d.name} - ${d.model} - ${d.condition || 'N/A'} - ${d.category || 'N/A'} - ${detail} - ${d.price}`;
+  }).join('\n');
+  const tags=cart.map((d,i)=>`${i+1}. ${d.tag}`).join('\n');
+  const faults=cart.map((d,i)=>`${i+1}. ${d.condition || 'N/A'}`).join('\n');
+  const total=cart.reduce((sum,d)=>sum+moneyValue(d.price),0);
+  return `REMEDIAL HEALTH — IT ASSET (GADGETS) DISPOSAL CLEARANCE AUCTIONING\n\nPURCHASE REQUEST: ${requestId}\n\nSELECTED ASSETS\n\nasset tag - Device Description - Model- Fault -  Category - condition - price\n${lines}\n\nTOTAL AMOUNT FOR SELECTED ITEMS\n${formatAmount(total)}\n\nPRIMARY ASSET TAG(S)\n${tags}\n\nCONDITION / FAULT\n${faults}\n\nBUYER INFORMATION\nName: ${name}\nEmail: ${email}\nPhone: ${phone}\nBID date: ${bidDate}\nExpected Date of Payment: ${paymentDate}\n\nCSV FILE: ${requestId}.csv\nPlease attach the downloaded CSV to this WhatsApp message before or after sending.\n\nPlease confirm availability and next steps for the selected gadget(s).`;
 }
 function submitWhatsApp(e){
   e.preventDefault();
@@ -1181,13 +1129,15 @@ function submitWhatsApp(e){
   const paymentDate=document.getElementById('paymentDate').value;
   if(!name||!email||!phone||!paymentDate){ alert('Please complete all buyer details before submitting.'); return; }
   const requestId=makeRequestId();
-  const submittedAt=new Date().toLocaleString('en-GB',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit',second:'2-digit',hour12:false});
-  const rows=cart.map(d=>[requestId,submittedAt,name,email,phone,paymentDate,d.tag,d.type,d.brand,d.name,d.model,d.category,d.condition,d.price]);
+  const now=new Date();
+  const bidDate=now.toLocaleDateString('en-GB',{day:'2-digit',month:'2-digit',year:'numeric'});
+  const submittedAt=now.toLocaleString('en-GB',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit',second:'2-digit',hour12:false});
+  const rows=cart.map(d=>[requestId,bidDate,submittedAt,name,email,phone,paymentDate,d.tag,d.type,d.brand,d.name,d.model,d.category,d.condition,conditionDetail(d),d.price]);
   const filename=`${requestId}.csv`;
   downloadCSV(filename,rows);
-  const text=buildWhatsAppText(requestId,name,email,phone,paymentDate);
+  const text=buildWhatsAppText(requestId,name,email,phone,paymentDate,bidDate);
   try{ localStorage.setItem('rhsLastPurchaseRequest',JSON.stringify({requestId,submittedAt,filename,assets:cart.map(d=>d.tag),name,email,phone,paymentDate})); }catch(err){ console.warn('Local request log unavailable:',err); }
-  window.open(`https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(text)}`,'_blank');
+  window.location.href=`https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(text)}`;
   showRequestConfirmation(requestId,filename);
 }
 function showRequestConfirmation(requestId,filename){
@@ -1222,7 +1172,7 @@ loadAssets();
         <div><label for="buyerEmail">Email Address</label><input id="buyerEmail" type="email" required placeholder="name@company.com"></div>
         <div><label for="buyerPhone">Phone Number</label><input id="buyerPhone" type="tel" required placeholder="08012345678"></div>
         <div><label for="paymentDate">Expected Date of Payment</label><input id="paymentDate" type="date" required></div>
-        <button class="whatsapp" type="submit">📄 Generate CSV & Open WhatsApp</button><div class="csv-help">CSV downloads automatically. Attach it to WhatsApp before sending.</div>
+        <button class="whatsapp" type="submit">📄 Generate CSV & Open WhatsApp</button><div class="csv-help">CSV downloads automatically. Attach it to the WhatsApp message before or after sending.</div>
       </form>
       <p class="notice">Maximum <b>3 assets</b> per request. Each WhatsApp request uses the selected <b>Asset Tag(s)</b> as the primary reference.</p>
     </div>
@@ -1281,27 +1231,6 @@ loadAssets();
   updateCountdown();
   setInterval(updateCountdown,1000);
 })();
-</script>
-<script>
-
-/* Scroll behavior: keep the auction countdown visible while the rest of the header scrolls away. */
-(function () {
-  const countdown = document.querySelector(
-    '.auction-countdown, .countdown-card, #auctionCountdown, .fair-opening-card'
-  );
-  if (!countdown) return;
-
-  const header = countdown.closest('header');
-  if (header) header.classList.add('header-scroll-enabled');
-
-  function updateScrollState() {
-    document.body.classList.toggle('page-scrolled', window.scrollY > 8);
-  }
-
-  window.addEventListener('scroll', updateScrollState, { passive: true });
-  updateScrollState();
-})();
-
 </script>
 </body>
 </html>
