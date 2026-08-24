@@ -17,5 +17,10 @@
     "40",
     "44",
     "164"
-  ]
+  ],
+  "available_count": 198,
+  "selected_count": 0,
+  "selected_asset_tags": [],
+  "selection_limit": 1,
+  "status": "All assets available; no assets pre-selected"
 }
