@@ -1156,15 +1156,64 @@ function conditionDetail(d){
 function buildEmailBody(requestId,name,email,phone,paymentDate,bidDate){
   const d = cart[0];
   const total = moneyValue(d.price);
-  const header = 'Asset Tag | Device Description | Model | Fault | Category | Condition | Price';
-  const row = [d.tag, d.name, d.model, d.condition || 'N/A', d.category || 'N/A', conditionDetail(d), d.price].join(' | ');
-  return `Dear Remedial Health Asset Disposal Team,\n\nI would like to submit a bid/purchase request for the following gadget under the Remedial Health IT Asset (Gadgets) Disposal Clearance Auctioning exercise.\n\nPURCHASE/BID REQUEST NUMBER: ${requestId}\n\nBUYER INFORMATION\nName: ${name}\nEmail: ${email}\nPhone: ${phone}\nBID Date: ${bidDate}\nExpected Date of Payment: ${paymentDate}\n\nSELECTED ASSET\n${header}\n${row}\n\nTOTAL AMOUNT FOR SELECTED ITEM\n${formatAmount(total)}\n\nThe attached CSV file contains the complete structured bid record for this request.\n\nKindly confirm the availability of the selected gadget and advise on the next steps required to complete the purchase.\n\nThank you.\n\nRegards,\n${name}`;
+  const line = '────────────────────────────────────────────────────────';
+  const value = (v) => String(v ?? '').trim() || 'N/A';
+
+  return `Dear Remedial Health Asset Disposal Team,
+
+I would like to formally submit a bid/purchase request for the gadget listed below under the Remedial Health IT Asset (Gadgets) Disposal Clearance Auctioning exercise.
+
+PURCHASE / BID REQUEST NUMBER
+${requestId}
+
+BUYER INFORMATION
+${line}
+Name: ${value(name)}
+Email: ${value(email)}
+Phone: ${value(phone)}
+BID Date: ${value(bidDate)}
+Expected Date of Payment: ${value(paymentDate)}
+
+SELECTED ASSET
+${line}
+Asset Tag          : ${value(d.tag)}
+Device Description : ${value(d.name)}
+Model              : ${value(d.model)}
+Fault              : ${value(d.condition)}
+Category           : ${value(d.category)}
+Condition          : ${value(conditionDetail(d))}
+Price              : ${value(d.price)}
+${line}
+
+TOTAL AMOUNT FOR SELECTED ITEM
+${formatAmount(total)}
+
+The attached CSV file contains the complete structured bid record for this request.
+
+Kindly confirm the availability of the selected gadget and advise on the next steps required to complete the purchase.
+
+Thank you.
+
+Regards,
+${value(name)}`;
 }
+
 function openEmailCompose(requestId,name,email,phone,paymentDate,bidDate){
   const body = buildEmailBody(requestId,name,email,phone,paymentDate,bidDate);
-  const mailto = `mailto:olatunde.aileru@remedialhealth.com,osaretin.eboigbe@remedialhealth.com,ibukun.lasabi@work.remedialhealth.com?subject=${encodeURIComponent('BID FOR REMEDIAL HEALTH — IT ASSET (GADGETS) DISPOSAL')}&body=${encodeURIComponent(body)}`;
+  const recipients = [
+    'olatunde.aileru@remedialhealth.com',
+    'osaretin.eboigbe@remedialhealth.com',
+    'ibukun.lasabi@work.remedialhealth.com'
+  ];
+  // Keep all three recipients in the TO field. Using the recipient list
+  // in the mailto authority is more compatible with iOS Mail than relying
+  // on navigator.share, which cannot populate the To field.
+  const to = recipients.join(',');
+  const subject = 'BID FOR REMEDIAL HEALTH — IT ASSET (GADGETS) DISPOSAL';
+  const mailto = `mailto:${to}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
   window.location.href = mailto;
 }
+
 async function submitBidEmail(e){
   e.preventDefault();
   if(!cart.length){ alert('Please select one available asset before submitting.'); return; }
@@ -1189,27 +1238,15 @@ async function submitBidEmail(e){
   try{ localStorage.setItem('rhsLastPurchaseRequest',JSON.stringify({requestId,submittedAt,filename,assets:cart.map(d=>d.tag),name,email,phone,paymentDate})); }catch(err){ console.warn('Local request log unavailable:',err); }
   showRequestConfirmation(requestId,filename);
 
-  // Browsers do not permit a mailto link to silently attach a local file.
-  // On supported mobile browsers, offer the generated CSV through the native share sheet.
-  const file = new File([new Uint8Array([0xEF,0xBB,0xBF]),csv], filename, {type:'text/csv'});
-  if(navigator.share && navigator.canShare && navigator.canShare({files:[file]})){
-    try{
-      await navigator.share({
-        files:[file],
-        title:'BID FOR REMEDIAL HEALTH — IT ASSET (GADGETS) DISPOSAL',
-        text:buildEmailBody(requestId,name,email,phone,paymentDate,bidDate)
-      });
-      return;
-    }catch(err){
-      if(err && err.name === 'AbortError') return;
-    }
-  }
+  // IMPORTANT: Do not use navigator.share here. It can open the email app
+  // but cannot reliably populate the To field or subject. mailto is used
+  // so all recipients and the subject are inserted into the email draft.
   openEmailCompose(requestId,name,email,phone,paymentDate,bidDate);
 }
 function showRequestConfirmation(requestId,filename){
   const old=document.getElementById('requestConfirmation'); if(old) old.remove();
   const box=document.createElement('div'); box.id='requestConfirmation'; box.className='request-confirmation';
-  box.innerHTML=`<div class="request-confirmation-icon">✓</div><div class="request-confirmation-copy"><strong>Purchase request prepared</strong><span>Request ID: <b>${esc(requestId)}</b></span><small><b>${esc(filename)}</b> has been downloaded. Attach it to the email before sending if your email client does not support automatic file sharing.</small></div><button type="button" onclick="this.closest('.request-confirmation').remove()" aria-label="Close confirmation">×</button>`;
+  box.innerHTML=`<div class="request-confirmation-icon">✓</div><div class="request-confirmation-copy"><strong>Purchase request prepared</strong><span>Request ID: <b>${esc(requestId)}</b></span><small><b>${esc(filename)}</b> has been downloaded. The CSV has been downloaded. Attach it to the email before sending.</small></div><button type="button" onclick="this.closest('.request-confirmation').remove()" aria-label="Close confirmation">×</button>`;
   document.body.appendChild(box);
 }
 loadAssets();
@@ -1238,7 +1275,7 @@ loadAssets();
         <div><label for="buyerEmail">Email Address</label><input id="buyerEmail" type="email" required placeholder="name@company.com"></div>
         <div><label for="buyerPhone">Phone Number</label><input id="buyerPhone" type="tel" required placeholder="08012345678"></div>
         <div><label for="paymentDate">Expected Date of Payment</label><input id="paymentDate" type="date" required></div>
-        <button class="email-submit" type="submit">📧 Generate Bid CSV & Open Email</button><div class="csv-help">The CSV is generated automatically. On supported devices, choose your email app from the file-share prompt to attach it.</div>
+        <button class="email-submit" type="submit">📧 Generate Bid CSV & Open Email</button><div class="csv-help">The CSV is generated automatically and downloaded. Attach it to the email before sending.</div>
       </form>
       <p class="notice">Maximum <b>1 asset</b> per request. Each request uses the selected <b>Asset Tag</b> as the primary reference.</p>
     </div>
