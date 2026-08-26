@@ -22,7 +22,7 @@ GitHub-ready static website for the Remedial Health IT asset disposal / staff cl
 
 The site is a static client-side application. The asset catalogue is loaded from `data/assets.json`, so future asset-register updates can be made without editing the main HTML structure.
 
-The Bid / Purchase Cart supports a maximum of one asset and generates a structured CSV bid record and opens an email draft addressed to the three designated Remedial Health recipients. The catalogue currently has no pre-selected/unavailable assets; all 198 assets are available for selection. The email draft is pre-addressed to the designated Remedial Health recipients and the CSV is downloaded for attachment.
+The Bid / Purchase Cart supports a maximum of two assets, with only one asset allowed from each device type, and generates a structured CSV bid record and opens an email draft addressed to five designated Remedial Health recipients. The catalogue currently has no pre-selected/unavailable assets; all 198 assets are available for selection. The email draft is pre-addressed to the designated Remedial Health recipients and the CSV is downloaded for attachment.
 
 ## Source
 
@@ -33,7 +33,7 @@ The asset register was structured from the supplied IT Asset Disposal document u
 Purchase requests are exported as UTF-8 CSV with real CRLF row endings and a UTF-8 BOM for Excel/Google Sheets compatibility. Each selected asset occupies one row and the Asset Tag is the primary asset identifier.
 
 ### Email bid workflow
-The Bid / Purchase Cart is limited to one asset. Submitting the form generates an Excel-compatible CSV and opens an email draft with the required recipients, subject and professional bid body. Browser security prevents a standard `mailto:` link from silently attaching a locally generated file; supported mobile browsers are offered a native file-share flow that can attach the CSV to the selected email application.
+The Bid / Purchase Cart supports a maximum of two assets, with only one asset permitted from each device type. Submitting the form generates an Excel-compatible CSV and opens an email draft with the required recipients, subject and professional bid body. Browser security prevents a standard `mailto:` link from silently attaching a locally generated file; supported mobile browsers are offered a native file-share flow that can attach the CSV to the selected email application.
 
 ### Current availability state
 All 198 assets are currently available. The `data/selected-assets.json` file is intentionally empty (`count: 0`, `assetTags: []`). If an asset is later reserved/selected by the administrator, add its Asset Tag to that file and the site will mark it as SELECTED.

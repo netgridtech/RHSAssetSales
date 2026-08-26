@@ -877,6 +877,12 @@ body{
 @media(max-width:900px){.stats{grid-template-columns:repeat(3,1fr)!important}}
 @media(max-width:600px){.stats{grid-template-columns:repeat(2,1fr)!important}}
 
+
+/* Final header behavior: header scrolls naturally with page content */
+.header{position:relative!important;top:auto!important;left:auto!important;right:auto!important}
+body{padding-top:0!important}
+@media(max-width:1050px), (max-width:700px), (max-width:480px){body{padding-top:0!important}}
+
 </style>
 </head>
 <body>
@@ -918,9 +924,6 @@ body{
         If you are interested in purchasing any of the gadgets, please treat this as urgent,
         as the offer will be extended to non-staff after a specified period.
       </p>
-      <div class="contact-note">
-        Need further assistance, contact: <strong>Osas 09167084846</strong>
-      </div>
     </div>
   </div>
 </header>
@@ -1173,57 +1176,66 @@ function conditionDetail(d){
 function buildEmailBody(requestId,name,email,phone,paymentDate,bidDate){
   const total = cart.reduce((sum,d)=>sum+moneyValue(d.price),0);
   const value = (v) => String(v ?? '').trim() || 'N/A';
-  const assetRows = cart.map((d,i)=>[
-    `${i+1}. ${value(d.tag)}`,
-    value(d.name),
-    value(d.model),
-    value(d.condition),
-    value(d.category),
-    value(conditionDetail(d)),
-    value(d.price)
-  ]);
-  const assetTable = [
-    'No. | Asset Tag | Device Description | Model | Fault | Category | Condition | Price',
-    ...assetRows.map(r => r.join(' | '))
-  ].join('\n');
+  const line = '────────────────────────────────';
+  const assets = cart.map((d,i)=>[
+    `${i+1}. ASSET TAG: ${value(d.tag)}`,
+    `   Device Description: ${value(d.name)}`,
+    `   Model: ${value(d.model)}`,
+    `   Fault: ${value(d.condition)}`,
+    `   Category: ${value(d.category)}`,
+    `   Condition: ${value(conditionDetail(d))}`,
+    `   Price: ${value(d.price)}`
+  ].join('\r\n')).join(`\r\n\r\n${line}\r\n\r\n`);
 
-  return `Dear Remedial Health Asset Disposal Team,
-
-I would like to formally submit a bid/purchase request for the gadget(s) listed below under the Remedial Health IT Asset (Gadgets) Disposal Clearance Auctioning exercise.
-
-PURCHASE / BID REQUEST NUMBER
-${requestId}
-
-BUYER INFORMATION
-Name: ${value(name)}
-Email: ${value(email)}
-Phone: ${value(phone)}
-BID Date: ${value(bidDate)}
-Expected Date of Payment: ${value(paymentDate)}
-
-SELECTED ASSETS
-${assetTable}
-
-TOTAL AMOUNT FOR SELECTED ITEMS
-${formatAmount(total)}
-
-The attached CSV file contains the complete structured bid record for this request.
-
-Kindly confirm the availability of the selected gadget(s) and advise on the next steps required to complete the purchase.
-
-Please note that payment is expected by 31st August 2026. Where payment is delayed beyond this date, the selected item(s) may be made visible to the general public.
-
-Thank you.
-
-Regards,
-${value(name)}`;
+  return [
+    'Dear Remedial Health Asset Disposal Team,',
+    '',
+    'I am writing to formally submit a bid/purchase request for the gadget(s) listed below under the Remedial Health IT Asset (Gadgets) Disposal Clearance Auctioning exercise.',
+    '',
+    line,
+    'PURCHASE / BID REQUEST DETAILS',
+    line,
+    `Request Number: ${value(requestId)}`,
+    `Bid Date: ${value(bidDate)}`,
+    `Expected Date of Payment: ${value(paymentDate)}`,
+    '',
+    line,
+    'BUYER INFORMATION',
+    line,
+    `Name: ${value(name)}`,
+    `Email: ${value(email)}`,
+    `Phone: ${value(phone)}`,
+    '',
+    line,
+    'SELECTED ASSET(S)',
+    line,
+    assets,
+    '',
+    line,
+    'TOTAL BID VALUE',
+    line,
+    formatAmount(total),
+    '',
+    'The corresponding CSV bid file has been downloaded and should be attached to this email before submission.',
+    '',
+    'Kindly confirm the availability of the selected asset(s) and advise on the next steps required to complete the purchase.',
+    '',
+    'Payment Notice: All successful buyers are expected to complete payment on or before 31st August 2026. Where payment is delayed beyond this date, the selected asset(s) may be released and made visible to the general public.',
+    '',
+    'Thank you.',
+    '',
+    'Regards,',
+    value(name)
+  ].join('\r\n');
 }
 function openEmailCompose(requestId,name,email,phone,paymentDate,bidDate){
   const body = buildEmailBody(requestId,name,email,phone,paymentDate,bidDate);
   const recipients = [
     'olatunde.aileru@remedialhealth.com',
     'osaretin.eboigbe@remedialhealth.com',
-    'ibukun.lasabi@work.remedialhealth.com'
+    'ibukun.lasabi@work.remedialhealth.com',
+    'idowu.adebisi@remedialhealth.com',
+    'oluwaseyifunmi.adekanmi@work.remedialhealth.com'
   ];
   // Keep all three recipients in the TO field. Using the recipient list
   // in the mailto authority is more compatible with iOS Mail than relying
