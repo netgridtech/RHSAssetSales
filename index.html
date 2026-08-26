@@ -124,6 +124,14 @@ box-shadow:0 8px 22px rgba(0,0,0,.18);padding:10px 13px
 .notice{font-size:.72rem;color:var(--muted);margin-top:10px}
 .empty{background:#fff;border:1px dashed #cbd5e1;border-radius:14px;padding:40px;text-align:center;color:var(--muted);grid-column:1/-1}
 .footer{margin-top:35px;padding:25px 0;color:var(--muted);font-size:.78rem;text-align:center}
+
+.sale-basis-fact{display:flex;flex-direction:column;align-items:flex-start;gap:4px}
+.payment-deadline-note{display:block;margin-top:4px;color:#b8c4d8;font-size:.68rem;line-height:1.4;max-width:420px}
+.selected-overlay{position:absolute;inset:0;background:rgba(15,23,42,.62);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:7px;text-align:center;padding:12px}
+.selected-stamp{font-size:clamp(1.4rem,3vw,2.2rem);font-weight:1000;letter-spacing:.12em;color:#fff;border:4px solid #fff;padding:6px 14px;border-radius:10px;transform:rotate(-7deg);text-shadow:0 3px 8px rgba(0,0,0,.35)}
+.selected-buyer{color:#fff;font-size:.75rem;font-weight:800;background:rgba(0,0,0,.32);padding:5px 9px;border-radius:999px}
+.selected-payment{color:#fff;font-size:.68rem;font-weight:900;background:#059669;padding:4px 8px;border-radius:999px;text-transform:uppercase}
+.select:disabled{background:#94a3b8!important;color:#fff!important;cursor:not-allowed!important;opacity:.95}
 @media(max-width:1180px){
   .layout{grid-template-columns:minmax(0,1fr) 320px}
   .grid{grid-template-columns:repeat(2,minmax(0,1fr))}
@@ -900,9 +908,10 @@ body{
             </div>
           </div>
         </div>
-        <div class="fact">
+        <div class="fact sale-basis-fact">
           <span class="fact-label">Sale Basis</span>
           <strong>CASH AND CARRY</strong>
+          <small class="payment-deadline-note">All buyers are expected to make payment by <b>31st August 2026</b>. If payment is delayed beyond this date, selected items may be made visible to the general public.</small>
         </div>
       </div>
       <p class="urgent-note">
@@ -952,7 +961,7 @@ body{
       <div class="catalog-toolbar">
         <div>
           <h2>Available Gadgets</h2>
-          <p>Select 1 asset to submit one purchase request.</p>
+          <p>Select up to <b>2 assets</b> — maximum 1 item from each device type.</p>
         </div>
         <div class="view-status"><span id="visibleCount">198</span> assets available</div>
       </div>
@@ -961,7 +970,7 @@ body{
     
   </div>
 
-  <div class="footer">Remedial Health · IT Asset (Gadgets) Disposal Clearance Auctioning · 198 assets in the master register; all assets are currently available for selection.</div>
+  <div class="footer">Remedial Health · IT Asset (Gadgets) Disposal Clearance Auctioning · 198 assets in the master register; all assets are currently available for selection. Maximum 2 items per request, with no two items from the same device type.</div>
 </main>
 
 <script>
@@ -969,6 +978,7 @@ let devices = [];
 let activeType = "ALL";
 let cart = [];
 let selectedAssetTags = new Set();
+let selectedAssetRecords = new Map();
 
 async function loadAssets(){
   try{
@@ -979,7 +989,11 @@ async function loadAssets(){
       const selectedResponse = await fetch("data/selected-assets.json", {cache:"no-store"});
       if(selectedResponse.ok){
         const selectedData = await selectedResponse.json();
-        selectedAssetTags = new Set((selectedData.assetTags || []).map(String));
+        const records = Array.isArray(selectedData.assets) ? selectedData.assets : [];
+        selectedAssetRecords = new Map(records.map(item => [String(item.assetTag ?? item.tag), item]));
+        const tagsFromRecords = records.map(item => String(item.assetTag ?? item.tag));
+        const tagsFromLegacyList = (selectedData.assetTags || []).map(String);
+        selectedAssetTags = new Set([...tagsFromLegacyList, ...tagsFromRecords].filter(Boolean));
       }
     }catch(selectedError){
       console.warn("Selected asset list could not be loaded:", selectedError);
@@ -1011,24 +1025,27 @@ if(paymentDateInput) paymentDateInput.min = new Date().toISOString().split("T")[
 function addToCart(id){
   const device = devices.find(d => d.id === id);
   if(!device) return;
-  if(selectedAssetTags.has(String(device.tag))){
+  const tag = String(device.tag);
+  if(selectedAssetTags.has(tag)){
     alert(`Asset Tag ${device.tag} has already been selected and is no longer available.`);
     return;
   }
-
   if(cart.some(d => d.id === id)){
     alert("This asset is already in your cart.");
     return;
   }
-  if(cart.length >= 1){
-    alert("Maximum of 1 asset can be added to the cart.");
+  if(cart.length >= 2){
+    alert("Maximum of 2 assets can be selected per request.");
     return;
   }
-
+  const sameType = cart.find(d => String(d.type).toLowerCase() === String(device.type).toLowerCase());
+  if(sameType){
+    alert(`You can select only 1 ${device.type} per request. Please choose a different device type.`);
+    return;
+  }
   cart.push(device);
   updateCart();
 }
-
 function removeFromCart(id){
   cart = cart.filter(d => d.id !== id);
   updateCart();
@@ -1047,7 +1064,7 @@ function updateCart(){
       <div class="selected">
         <div class="label">Selected Assets</div>
         <div class="tag-main">—</div>
-        <div class="meta">Add 1 asset.</div>
+        <div class="meta">Select up to 2 assets, with no two from the same device type.</div>
       </div>`;
     return;
   }
@@ -1055,7 +1072,7 @@ function updateCart(){
   container.innerHTML = cart.map((d, i) => `
     <div class="cart-item">
       <div class="cart-item-tag">#${esc(d.tag)}</div>
-      <div class="cart-item-name">${esc(d.name)}<br><span class="meta">${esc(d.type)} · ${esc(d.price)}</span></div>
+      <div class="cart-item-name">${esc(d.name)}<br><span class="meta">${esc(d.type)} · ${esc(d.category)} · ${esc(d.price)}</span></div>
       <button type="button" class="remove-item" onclick="removeFromCart(${d.id})" aria-label="Remove asset ${esc(d.tag)}">×</button>
     </div>
   `).join("");
@@ -1076,7 +1093,7 @@ function card(d){
     <div class="card-img">
       <img src="${esc(typeImage(d))}" alt="${esc(d.brand)} ${esc(d.model)} — ${esc(d.name)}" loading="lazy">
       <span class="asset-tag">ASSET TAG: ${esc(d.tag)}</span>
-      ${selected ? '<div class="selected-overlay" aria-label="Selected"><div class="selected-stamp">SELECTED</div></div>' : ''}
+      ${selected ? (()=>{ const rec=selectedAssetRecords.get(String(d.tag))||{}; const buyer=rec.buyerName ? `<div class="selected-buyer">Buyer: ${esc(rec.buyerName)}</div>` : ''; const pay=rec.paymentStatus ? `<div class="selected-payment">${esc(rec.paymentStatus)}</div>` : ''; return `<div class="selected-overlay" aria-label="Selected"><div class="selected-stamp">SELECTED</div>${buyer}${pay}</div>`; })() : ''}
     </div>
     <div class="card-body">
       <div class="badges"><span class="badge type">${esc(d.type)}</span><span class="badge cat">${esc(d.category)}</span>${selected ? '<span class="selected-badge">Selected</span>' : ''}</div>
@@ -1154,50 +1171,53 @@ function conditionDetail(d){
   return d.categoryDetail || d.category || '';
 }
 function buildEmailBody(requestId,name,email,phone,paymentDate,bidDate){
-  const d = cart[0];
-  const total = moneyValue(d.price);
-  const line = '────────────────────────────────────────────────────────';
+  const total = cart.reduce((sum,d)=>sum+moneyValue(d.price),0);
   const value = (v) => String(v ?? '').trim() || 'N/A';
+  const assetRows = cart.map((d,i)=>[
+    `${i+1}. ${value(d.tag)}`,
+    value(d.name),
+    value(d.model),
+    value(d.condition),
+    value(d.category),
+    value(conditionDetail(d)),
+    value(d.price)
+  ]);
+  const assetTable = [
+    'No. | Asset Tag | Device Description | Model | Fault | Category | Condition | Price',
+    ...assetRows.map(r => r.join(' | '))
+  ].join('\n');
 
   return `Dear Remedial Health Asset Disposal Team,
 
-I would like to formally submit a bid/purchase request for the gadget listed below under the Remedial Health IT Asset (Gadgets) Disposal Clearance Auctioning exercise.
+I would like to formally submit a bid/purchase request for the gadget(s) listed below under the Remedial Health IT Asset (Gadgets) Disposal Clearance Auctioning exercise.
 
 PURCHASE / BID REQUEST NUMBER
 ${requestId}
 
 BUYER INFORMATION
-${line}
 Name: ${value(name)}
 Email: ${value(email)}
 Phone: ${value(phone)}
 BID Date: ${value(bidDate)}
 Expected Date of Payment: ${value(paymentDate)}
 
-SELECTED ASSET
-${line}
-Asset Tag          : ${value(d.tag)}
-Device Description : ${value(d.name)}
-Model              : ${value(d.model)}
-Fault              : ${value(d.condition)}
-Category           : ${value(d.category)}
-Condition          : ${value(conditionDetail(d))}
-Price              : ${value(d.price)}
-${line}
+SELECTED ASSETS
+${assetTable}
 
-TOTAL AMOUNT FOR SELECTED ITEM
+TOTAL AMOUNT FOR SELECTED ITEMS
 ${formatAmount(total)}
 
 The attached CSV file contains the complete structured bid record for this request.
 
-Kindly confirm the availability of the selected gadget and advise on the next steps required to complete the purchase.
+Kindly confirm the availability of the selected gadget(s) and advise on the next steps required to complete the purchase.
+
+Please note that payment is expected by 31st August 2026. Where payment is delayed beyond this date, the selected item(s) may be made visible to the general public.
 
 Thank you.
 
 Regards,
 ${value(name)}`;
 }
-
 function openEmailCompose(requestId,name,email,phone,paymentDate,bidDate){
   const body = buildEmailBody(requestId,name,email,phone,paymentDate,bidDate);
   const recipients = [
@@ -1216,12 +1236,16 @@ function openEmailCompose(requestId,name,email,phone,paymentDate,bidDate){
 
 async function submitBidEmail(e){
   e.preventDefault();
-  if(!cart.length){ alert('Please select one available asset before submitting.'); return; }
+  if(!cart.length){ alert('Please select at least 1 available asset before submitting.'); return; }
+  if(cart.length > 2){ alert('Maximum of 2 assets per request.'); return; }
+  const selectedTypes = cart.map(d => String(d.type).toLowerCase());
+  if(new Set(selectedTypes).size !== selectedTypes.length){ alert('Only 1 item per device type is allowed in a single request.'); return; }
   const name=document.getElementById('buyerName').value.trim();
   const email=document.getElementById('buyerEmail').value.trim();
   const phone=document.getElementById('buyerPhone').value.trim();
   const paymentDate=document.getElementById('paymentDate').value;
   if(!name||!email||!phone||!paymentDate){ alert('Please complete all buyer details before submitting.'); return; }
+  if(paymentDate > '2026-08-31'){ alert('Expected Date of Payment cannot be later than 31st August 2026.'); return; }
 
   const requestId=makeRequestId();
   const now=new Date();
@@ -1254,7 +1278,7 @@ loadAssets();
 
 <aside class="cart">
       <div class="cart-heading-row">
-  <h2>Bid / Purchase Cart <span id="cartCount" class="cart-count">0</span><span class="cart-limit">/ 1 max</span><span class="cart-status">● Ready</span></h2>
+  <h2>Bid / Purchase Cart <span id="cartCount" class="cart-count">0</span><span class="cart-limit">/ 2 max · 1 per type</span><span class="cart-status">● Ready</span></h2>
   <button type="button" id="cartToggle" class="cart-toggle" aria-expanded="true" aria-controls="bidCartBody">
     <span class="cart-toggle-icon">⌃</span><span class="cart-toggle-label">Minimize</span>
   </button>
@@ -1266,7 +1290,7 @@ loadAssets();
         <div class="selected">
           <div class="label">Primary Asset Placeholder</div>
           <div class="tag-main">—</div>
-          <div class="meta">Add 1 asset to this request.</div>
+          <div class="meta">Add up to 2 assets — one from each device type.</div>
         </div>
       </div>
 
@@ -1274,13 +1298,13 @@ loadAssets();
         <div><label for="buyerName">Full Name</label><input id="buyerName" required placeholder="Your full name"></div>
         <div><label for="buyerEmail">Email Address</label><input id="buyerEmail" type="email" required placeholder="name@company.com"></div>
         <div><label for="buyerPhone">Phone Number</label><input id="buyerPhone" type="tel" required placeholder="08012345678"></div>
-        <div><label for="paymentDate">Expected Date of Payment</label><input id="paymentDate" type="date" required></div>
+        <div><label for="paymentDate">Expected Date of Payment</label><input id="paymentDate" type="date" max="2026-08-31" required></div>
         <button class="email-submit" type="submit">📧 Generate Bid CSV & Open Email</button><div class="csv-help">The CSV is generated automatically and downloaded. Attach it to the email before sending.</div>
       </form>
-      <p class="notice">Maximum <b>1 asset</b> per request. Each request uses the selected <b>Asset Tag</b> as the primary reference.</p>
+      <p class="notice">Maximum <b>2 assets</b> per request, with <b>1 item per device type</b>. Each request uses the selected <b>Asset Tag</b> as the primary reference.</p>
     </div>
 </aside>
-<button type="button" id="cartRestore" class="cart-restore">🛒 View Cart <span id="restoreCount">0</span>/1</button>
+<button type="button" id="cartRestore" class="cart-restore">🛒 View Cart <span id="restoreCount">0</span>/2</button>
 <script>
 (function(){
   const cartEl=document.querySelector(".cart"), toggle=document.getElementById("cartToggle");

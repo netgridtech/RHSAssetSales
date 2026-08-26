@@ -37,3 +37,18 @@ The Bid / Purchase Cart is limited to one asset. Submitting the form generates a
 
 ### Current availability state
 All 198 assets are currently available. The `data/selected-assets.json` file is intentionally empty (`count: 0`, `assetTags: []`). If an asset is later reserved/selected by the administrator, add its Asset Tag to that file and the site will mark it as SELECTED.
+
+## Current selection rules
+
+- Buyers may select a maximum of **2 assets** per request.
+- A buyer may select **only 1 asset from each device type**. For example, Laptop + Phone is valid; Laptop + Laptop is not.
+- The rule is enforced in the browser before submission.
+- All 198 assets are currently available; no asset is pre-selected.
+
+## Payment deadline
+
+The sale basis is **CASH AND CARRY**. Buyers are expected to make payment by **31st August 2026**. If payment is delayed beyond that date, the selected item(s) may be made visible to the general public.
+
+## Selected asset administration
+
+Use `data/selected-assets.json` to manually mark an asset as selected and optionally record the buyer name and payment status. See `SELECTED_ASSET_ADMIN_GUIDE.md` for the supported structure and payment statuses.

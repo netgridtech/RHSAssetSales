@@ -21,6 +21,10 @@
   "available_count": 198,
   "selected_count": 0,
   "selected_asset_tags": [],
-  "selection_limit": 1,
-  "status": "All assets available; no assets pre-selected"
+  "selection_limit": 2,
+  "status": "All assets available; no assets pre-selected",
+  "selection_rule": "Maximum 2 assets per request; no two selected assets may share the same device type.",
+  "payment_deadline": "2026-08-31",
+  "payment_basis": "CASH AND CARRY",
+  "payment_deadline_note": "All buyers are expected to make payment by 31st August 2026. If payment is delayed beyond this date, selected items may be made visible to the general public."
 }
