@@ -1257,7 +1257,7 @@ async function submitBidEmail(e){
   const phone=document.getElementById('buyerPhone').value.trim();
   const paymentDate=document.getElementById('paymentDate').value;
   if(!name||!email||!phone||!paymentDate){ alert('Please complete all buyer details before submitting.'); return; }
-  if(paymentDate > '2026-08-31'){ alert('Expected Date of Payment cannot be later than 31st August 2026.'); return; }
+  if(paymentDate > '2026-09-30'){ alert('Expected Date of Payment cannot be later than 30th September 2026.'); return; }
 
   const requestId=makeRequestId();
   const now=new Date();
@@ -1310,7 +1310,7 @@ loadAssets();
         <div><label for="buyerName">Full Name</label><input id="buyerName" required placeholder="Your full name"></div>
         <div><label for="buyerEmail">Email Address</label><input id="buyerEmail" type="email" required placeholder="name@company.com"></div>
         <div><label for="buyerPhone">Phone Number</label><input id="buyerPhone" type="tel" required placeholder="08012345678"></div>
-        <div><label for="paymentDate">Expected Date of Payment</label><input id="paymentDate" type="date" max="2026-08-31" required></div>
+        <div><label for="paymentDate">Expected Date of Payment</label><input id="paymentDate" type="date" max="2026-09-30" required></div>
         <button class="email-submit" type="submit">📧 Generate Bid CSV & Open Email</button><div class="csv-help">The CSV is generated automatically and downloaded. Attach it to the email before sending.</div>
       </form>
       <p class="notice">Maximum <b>2 assets</b> per request, with <b>1 item per device type</b>. Each request uses the selected <b>Asset Tag</b> as the primary reference.</p>
