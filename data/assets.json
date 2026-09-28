@@ -2572,5 +2572,18 @@
     "price": "₦8,232.00",
     "id": 198,
     "image": "assets/images/tablet/113fbfc570b2.svg"
+  },
+  {
+    "tag": "199",
+    "type": "Phone",
+    "brand": "Samsung",
+    "name": "SAMSUNG A05 4/64GB",
+    "model": "SM-A055F/DS",
+    "category": "CAT 3",
+    "categoryDetail": "CAT 3 - Minor Functional Issue (Casing Issue/ Not Powering On)",
+    "condition": "BATTERY ISSUES",
+    "price": "₦39,046.88",
+    "id": 199,
+    "image": "assets/images/phone/cc7989e41b21.svg"  
   }
 ]
